@@ -3,7 +3,7 @@
 import { cpSync, existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { createInterface } from "node:readline/promises";
+import { emitKeypressEvents } from "node:readline";
 import { fileURLToPath } from "node:url";
 
 const skillName = "youtube-livechat-css";
@@ -18,6 +18,64 @@ const targets = [
   ["opencode", "OpenCode", join(userHome, ".config", "opencode", "skills")],
   ["copilot", "GitHub Copilot", join(userHome, ".copilot", "skills")],
 ].map(([key, label, skillsDir]) => ({ key, label, skillsDir }));
+const checkboxHint = "Up/Down move | Space toggle | A all | Enter install";
+
+function chooseTargets() {
+  const { stdin, stdout } = process;
+  if (!stdin.isTTY || !stdout.isTTY || typeof stdin.setRawMode !== "function") {
+    console.error("Interactive checkbox unavailable. Pass a target flag or --all.");
+    process.exit(1);
+  }
+
+  emitKeypressEvents(stdin);
+  stdin.setRawMode(true);
+  stdin.resume();
+
+  const checked = new Set([0]);
+  let cursor = 0;
+  let drawn = false;
+
+  const render = () => {
+    if (drawn) stdout.write(`\x1b[${targets.length}A`);
+    targets.forEach(({ label }, index) => {
+      stdout.write(`\r\x1b[2K${index === cursor ? ">" : " "} [${checked.has(index) ? "x" : " "}] ${label}\n`);
+    });
+    stdout.write(`\r\x1b[2K${checkboxHint}`);
+    drawn = true;
+  };
+
+  console.log("Choose agents to install for:");
+  stdout.write("\x1b[?25l");
+  render();
+
+  return new Promise((resolve) => {
+    const finish = () => {
+      stdin.removeListener("keypress", onKeypress);
+      stdin.setRawMode(false);
+      stdin.pause();
+      stdout.write("\x1b[?25h\n");
+    };
+
+    const onKeypress = (_input, key) => {
+      if (key.ctrl && key.name === "c") {
+        finish();
+        process.exit(130);
+      }
+      if (key.name === "up") cursor = (cursor - 1 + targets.length) % targets.length;
+      if (key.name === "down") cursor = (cursor + 1) % targets.length;
+      if (key.name === "space") checked.has(cursor) ? checked.delete(cursor) : checked.add(cursor);
+      if (key.name === "a") checked.size === targets.length ? checked.clear() : targets.forEach((_, index) => checked.add(index));
+      if (key.name === "return") {
+        if (!checked.size) return stdout.write("\x07");
+        finish();
+        return resolve(targets.filter((_, index) => checked.has(index)));
+      }
+      render();
+    };
+
+    stdin.on("keypress", onKeypress);
+  });
+}
 
 const args = new Set(process.argv.slice(2));
 const validArgs = new Set(["--all", "--force", "--help", "-h", ...targets.map(({ key }) => `--${key}`)]);
@@ -31,7 +89,8 @@ Targets:
 ${targets.map(({ key, label }) => `  --${key.padEnd(8)} ${label}`).join("\n")}
   --all      All supported agents
 
-Without a target flag, an interactive checklist is shown.`);
+Without a target flag, an interactive checkbox is shown.
+${checkboxHint}`);
   process.exit(0);
 }
 
@@ -45,27 +104,7 @@ for (const arg of args) {
 let selected = args.has("--all") ? targets : targets.filter(({ key }) => args.has(`--${key}`));
 
 if (!selected.length) {
-  if (!process.stdin.isTTY) {
-    console.error("No agent selected. Pass a target flag or --all.");
-    process.exit(1);
-  }
-
-  const prompt = createInterface({ input: process.stdin, output: process.stdout });
-  console.log("Choose agents to install for:");
-  targets.forEach(({ label }, index) => console.log(`  ${index + 1}. [ ] ${label}`));
-
-  while (!selected.length) {
-    const answer = (await prompt.question('Enter numbers separated by commas, or "all" [1]: ')).trim().toLowerCase() || "1";
-    const indexes = answer === "all" ? targets.map((_, index) => index) : [...new Set(answer.split(/[\s,]+/).map(Number).map((number) => number - 1))];
-
-    if (indexes.length && indexes.every((index) => Number.isInteger(index) && targets[index])) {
-      selected = indexes.map((index) => targets[index]);
-    } else {
-      console.error("Invalid selection. Use numbers from the checklist.");
-    }
-  }
-
-  prompt.close();
+  selected = await chooseTargets();
 }
 
 const installs = selected.map((target) => ({ ...target, destination: join(target.skillsDir, skillName) }));

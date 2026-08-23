@@ -8,7 +8,7 @@ The skill includes a scoped element guide for current YouTube chat renderers, ne
 npx youtube-livechat-css-skill
 ```
 
-The interactive checklist supports Codex, Claude Code, Cursor, Gemini CLI, OpenCode, and GitHub Copilot. Select multiple agents with comma-separated numbers, or enter `all`.
+The interactive checkbox supports Codex, Claude Code, Cursor, Gemini CLI, OpenCode, and GitHub Copilot. Move with Up/Down, toggle with Space, select all with A, and install with Enter.
 
 For non-interactive installs, pass target flags:
 

@@ -22,7 +22,7 @@ const run = (...args) => spawnSync(process.execPath, ["bin/install.js", ...args]
 try {
   const missingTarget = run();
   assert.equal(missingTarget.status, 1);
-  assert.match(missingTarget.stderr, /No agent selected/);
+  assert.match(missingTarget.stderr, /Interactive checkbox unavailable/);
 
   const first = run("--all");
   assert.equal(first.status, 0, first.stderr);
@@ -40,7 +40,7 @@ try {
 
   const update = run("--all", "--force");
   assert.equal(update.status, 0, update.stderr);
-  assert.match(run("--help").stdout, /GitHub Copilot/);
+  assert.match(run("--help").stdout, /Space toggle/);
   console.log("Installer test passed.");
 } finally {
   rmSync(temp, { recursive: true, force: true });
