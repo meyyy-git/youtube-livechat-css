@@ -2,6 +2,8 @@
 
 Installs the `$youtube-livechat-css` Agent Skill for designing one-file YouTube Live Chat themes for OBS browser sources.
 
+The skill includes a scoped element guide for current YouTube chat renderers, nested IDs, role states, membership gifts, Send Gift, Super Chat, and Super Sticker.
+
 ```bash
 npx youtube-livechat-css-skill
 ```

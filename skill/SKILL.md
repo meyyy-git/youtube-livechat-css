@@ -25,24 +25,17 @@ If the user declines configuration, show chat messages and paid/member events, a
 
 Use the smallest implementation that satisfies the approved brief:
 
-1. Verify selectors against supplied markup, the project's simulator, or the current rendered YouTube chat DOM. Treat known `yt-live-chat-*` selectors as candidates, not permanent API contracts.
-2. Reuse the project's working selector patterns and preview harness when present.
-3. Keep the deliverable in one CSS file. Use a small token block only when values repeat meaningfully.
-4. Hide only items approved in the visibility checklist. Keep names, messages, and monetary values legible at the target OBS size.
-5. Prefer CSS shapes and effects, then user-provided assets. Create new bitmap assets only when the concept needs them and image generation is available.
-6. Reference final assets with stable HTTPS URLs. Do not ship local file paths as the OBS-ready result.
-7. Use system fonts by default. External web fonts require user approval, a trusted host, and a fallback stack.
-
-Common renderer candidates include:
-
-- `yt-live-chat-text-message-renderer`
-- `yt-live-chat-paid-message-renderer`
-- `yt-live-chat-paid-sticker-renderer`
-- `yt-live-chat-membership-item-renderer`
-- `yt-live-chat-sponsorships-gift-purchase-announcement-renderer`
-- `yt-live-chat-sponsorships-gift-redemption-announcement-renderer`
-
-Do not copy a candidate selector into the final CSS unless it is relevant to the chosen visibility and verified as far as the available project or browser state allows.
+1. When writing or debugging selectors, visibility, or preview markup, read [references/youtube-live-chat-elements.md](references/youtube-live-chat-elements.md).
+2. Verify selectors against supplied markup, the project's simulator, a baseline stylesheet such as `yt-original.css`, or the current rendered YouTube chat DOM. Treat the reference as a navigation guide, not a permanent API contract.
+3. Search the available baseline before inventing a selector. Never derive a tag name from a feature label; YouTube mixes `yt-live-chat-*`, `ytd-sponsorships-*`, and view-model elements.
+4. Scope repeated IDs such as `#header`, `#content`, `#message`, and `#author-photo` under their renderer. Do not style these IDs globally.
+5. Distinguish simulator-only attributes from production YouTube attributes. In particular, do not rely on `author-type` unless the output targets that simulator rather than OBS YouTube chat.
+6. Reuse the project's working selector patterns and preview harness when present.
+7. Keep the deliverable in one CSS file. Use a small token block only when values repeat meaningfully.
+8. Hide only items approved in the visibility checklist. Keep names, messages, and monetary values legible at the target OBS size.
+9. Prefer CSS shapes and effects, then user-provided assets. Create new bitmap assets only when the concept needs them and image generation is available.
+10. Reference final assets with stable HTTPS URLs. Do not ship local file paths as the OBS-ready result.
+11. Use system fonts by default. External web fonts require user approval, a trusted host, and a fallback stack.
 
 ## Motion
 
@@ -59,6 +52,7 @@ Check at the requested OBS dimensions:
 - transparent page and list backgrounds;
 - long names, multiline messages, emoji, and missing optional fields;
 - every selected role and event type;
+- regular, header-only, deleted, avatar-hidden, and multiline states where applicable;
 - hidden elements do not leave gaps;
 - borders, ornaments, avatars, and amounts are not clipped;
 - text contrast and font size remain readable after OBS scaling;

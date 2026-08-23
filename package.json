@@ -1,6 +1,6 @@
 {
   "name": "youtube-livechat-css-skill",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Install the youtube-livechat-css skill across coding agents.",
   "type": "module",
   "bin": {
