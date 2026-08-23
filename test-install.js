@@ -6,19 +6,38 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const temp = mkdtempSync(join(tmpdir(), "youtube-livechat-css-skill-"));
-const env = { ...process.env, CODEX_HOME: temp };
+const env = { ...process.env, YOUTUBE_LIVECHAT_SKILL_HOME: temp };
+delete env.CODEX_HOME;
 const packageRoot = dirname(fileURLToPath(import.meta.url));
+const skillPaths = [
+  [".agents", "skills"],
+  [".claude", "skills"],
+  [".cursor", "skills"],
+  [".gemini", "skills"],
+  [".config", "opencode", "skills"],
+  [".copilot", "skills"],
+];
+const run = (...args) => spawnSync(process.execPath, ["bin/install.js", ...args], { cwd: packageRoot, env, encoding: "utf8" });
 
 try {
-  const first = spawnSync(process.execPath, ["bin/install.js"], { cwd: packageRoot, env, encoding: "utf8" });
+  const missingTarget = run();
+  assert.equal(missingTarget.status, 1);
+  assert.match(missingTarget.stderr, /No agent selected/);
+
+  const first = run("--all");
   assert.equal(first.status, 0, first.stderr);
-  assert.match(readFileSync(join(temp, "skills", "youtube-livechat-css", "SKILL.md"), "utf8"), /^---\nname: youtube-livechat-css/m);
+  for (const parts of skillPaths) {
+    const skillFile = join(temp, ...parts, "youtube-livechat-css", "SKILL.md");
+    assert.match(readFileSync(skillFile, "utf8"), /^---\nname: youtube-livechat-css/m);
+  }
 
-  const duplicate = spawnSync(process.execPath, ["bin/install.js"], { cwd: packageRoot, env, encoding: "utf8" });
+  const duplicate = run("--all");
   assert.equal(duplicate.status, 1);
+  assert.match(duplicate.stderr, /--force/);
 
-  const update = spawnSync(process.execPath, ["bin/install.js", "--force"], { cwd: packageRoot, env, encoding: "utf8" });
+  const update = run("--all", "--force");
   assert.equal(update.status, 0, update.stderr);
+  assert.match(run("--help").stdout, /GitHub Copilot/);
   console.log("Installer test passed.");
 } finally {
   rmSync(temp, { recursive: true, force: true });
