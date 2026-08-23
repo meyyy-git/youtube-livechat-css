@@ -1,0 +1,4 @@
+interface:
+  display_name: "YouTube Live Chat CSS"
+  short_description: "Build OBS-ready YouTube Live Chat CSS"
+  default_prompt: "Use $youtube-livechat-css to create a readable YouTube Live Chat theme for my OBS browser source."
