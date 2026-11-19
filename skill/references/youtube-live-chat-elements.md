@@ -1,13 +1,22 @@
 # YouTube Live Chat element guide
 
-Use this map to navigate a YouTube Live Chat stylesheet or DOM snapshot. It is derived from a real `yt-original.css` baseline and its matching dummy renderer, but YouTube can change private DOM without notice. Verify every renderer used in the final CSS against the best source available in the project.
+Use this map to find your way around YouTube Live Chat. YouTube can change its private DOM without notice, so treat this file as orientation and take the exact structure from the capture bundled with the skill:
+
+```bash
+node scripts/outline.mjs                       # every captured message variant
+node scripts/outline.mjs membership-item       # element tree of the variants whose key contains the text
+node scripts/outline.mjs --css "#author-photo" # YouTube's own rules for a selector
+node scripts/outline.mjs --shell               # the chain from <html> down to #items
+```
+
+The capture date is printed on the first line. Facts below marked "verified" were read from the live page on 2026-11-10.
 
 ## Selector rules
 
-- Search a supplied baseline first: `rg -n "yt-live-chat-|ytd-sponsorships-live-chat|yt-gift-message-view-model" path/to/yt-original.css`.
+- Look a selector up before writing it: `node scripts/outline.mjs --css "<part of the selector>"` shows what YouTube applies and how specific it is.
 - Scope repeated IDs beneath their renderer: `yt-live-chat-paid-message-renderer #content`, never bare `#content`.
-- Prefer custom-element tags, stable IDs, state attributes, and documented CSS variables over generated utility classes such as `.style-scope`.
-- `author-type` is added by some dummy renderers and is not a production YouTube contract. For OBS, verify role attributes, author-chip classes, and badge types instead.
+- Build a selector from the custom-element tag, the stable ID with its scope class, and state attributes: `yt-live-chat-paid-message-renderer #header.yt-live-chat-paid-message-renderer`. The scope class (the class that follows `style-scope` on every element) is what YouTube's own rules use, so a theme needs it to win; `.style-scope` itself is useless as a hook.
+- `author-type` is a real attribute on `yt-live-chat-text-message-renderer` (verified): empty for viewers, `member`, `moderator` or `owner` otherwise; the owner also carries `author-is-owner`. A moderator who is also a member is `author-type="moderator"` with two badges.
 - YouTube's gift renderers do not share one prefix. Use the exact tags below; do not normalize their names.
 - Use `!important` narrowly for hiding, transparency, or an override that demonstrably loses to YouTube specificity or inline styles.
 
@@ -17,7 +26,7 @@ Use this map to navigate a YouTube Live Chat stylesheet or DOM snapshot. It is d
 | --- | --- | --- |
 | Page root | `html`, `body`, `yt-live-chat-app`, `yt-live-chat-renderer` | Make all required layers transparent for OBS. |
 | Chat surface | `#chat.yt-live-chat-renderer` | Contains the visible feed and input layers. |
-| Message feed | `#chat-messages.yt-live-chat-renderer`, `#item-list.yt-live-chat-renderer`, `yt-live-chat-item-list-renderer` | Feed internals include `#item-scroller` and `#items`. |
+| Message feed | `#chat-messages.yt-live-chat-renderer`, `#item-list.yt-live-chat-renderer`, `yt-live-chat-item-list-renderer` | Inside: `#contents > #item-scroller > #item-offset > #items` (verified). `#item-offset` hides overflow and gets its height from JavaScript; `#items` is positioned inside it. |
 | Header | `yt-live-chat-header-renderer` | Hide only when the user selected it. |
 | Ticker | `#ticker.yt-live-chat-renderer`, `yt-live-chat-ticker-renderer` | Paid/member ticker items are separate renderers. |
 | Input | `#input-panel.yt-live-chat-renderer`, `yt-live-chat-message-input-renderer` | Restricted participation may use `yt-live-chat-restricted-participation-renderer`. |
@@ -30,9 +39,9 @@ Use this map to navigate a YouTube Live Chat stylesheet or DOM snapshot. It is d
 
 | Message type | Exact renderer | High-value children | States and traps |
 | --- | --- | --- | --- |
-| Regular chat | `yt-live-chat-text-message-renderer` | `#timestamp`, `#author-photo`, `yt-live-chat-author-chip`, `#message`, `#menu`, `#deleted-state` | Check `[author-is-owner]`, `[author-is-moderator]`, `[author-is-member]`, `[avatar-hidden]`, `[is-deleted]`, `[in-banner]`. |
-| Membership | `yt-live-chat-membership-item-renderer` | `#card`, `#header`, `#header-content`, `#header-subtext`, `#header-primary-text`, `#content`, `#message`, `#author-photo`, `#menu` | Test `[show-only-header]` and a membership with a message. |
-| Super Chat | `yt-live-chat-paid-message-renderer` | `#card`, `#header`, `#header-content`, `#author-name-chip`, `#purchase-amount-column`, `#purchase-amount`, `#content`, `#message`, `#author-photo`, `#menu` | Preserve tier CSS variables unless intentionally replacing them. Test `[show-only-header]`, `[is-deleted]`, and `[has-heart-button]`. |
+| Regular chat | `yt-live-chat-text-message-renderer` | `#author-photo`, then `#content` holding `#timestamp`, `yt-live-chat-author-chip`, `#message-container > #message`, `#deleted-state`; then `#menu` | Roles: `[author-type]` (verified), `[author-is-owner]`. Also `[is-deleted]` (verified), `[avatar-hidden]`, `[in-banner]`. |
+| Membership | `yt-live-chat-membership-item-renderer` | `#card`, `#header`, `#header-content`, `#header-subtext`, `#header-primary-text`, `#content`, `#message`, `#author-photo`, `#menu` | New member: `[show-only-header]`, text in `#header-subtext`. Milestone: `[has-primary-header-text]` (verified; not `has-primary-text`), text in `#header-primary-text`, tier name in `#header-subtext`; `[show-only-header]` too when it has no message. |
+| Super Chat | `yt-live-chat-paid-message-renderer` | `#card`, `#header`, `#header-content`, `#single-line`, `#author-name-chip`, `#leaderboard-badge`, `#purchase-amount-column`, `#purchase-amount`, `#content`, `#message`, `#author-photo`, `#menu`, `#lower-bumper` | Tier colours arrive as inline `--yt-live-chat-paid-message-*` variables; match a tier with `[style*="255,202,40"]` (`node scripts/outline.mjs --tiers` lists all seven). `[show-only-header]` when there is no message (verified). The avatar `<img>` is 32 × 40 inside a 32 × 32 `#author-photo` (verified). |
 | Super Sticker | `yt-live-chat-paid-sticker-renderer` | `#author-info`, `#author-name-chip`, `#purchase-amount-chip`, `#sticker-container`, `#sticker`, `#content`, `#author-photo`, `#menu` | Test `[is-v2-style]`, `[is-deleted]`, and loaded sticker geometry. |
 | Legacy paid event | `yt-live-chat-legacy-paid-message-renderer` | `#card`, `#author-name`, `#content`, `#event-text`, `#detail-text` | Support only when present in the target DOM or simulator. |
 | Send Gift | `yt-gift-message-view-model` | Classic: `#gift-message-content`, `#icon`, `#message-block`, `#author-name`, `#message`. V2: `#gift-message-v2`, `#author-photo`, `#content`, `#author-name-v2`, `#message-v2`, `#gift-image` | Classic and V2 layouts are different; do not style only one accidentally. |
@@ -49,10 +58,10 @@ Use this map to navigate a YouTube Live Chat stylesheet or DOM snapshot. It is d
 Use more than color to keep roles legible when possible.
 
 ```css
-/* Renderer state: verify attributes in the target DOM. */
-yt-live-chat-text-message-renderer[author-is-owner] { }
-yt-live-chat-text-message-renderer[author-is-moderator] { }
-yt-live-chat-text-message-renderer[author-is-member] { }
+/* Renderer state (verified). */
+yt-live-chat-text-message-renderer[author-type="owner"] { }
+yt-live-chat-text-message-renderer[author-type="moderator"] { }
+yt-live-chat-text-message-renderer[author-type="member"] { }
 
 /* Author chip and badge fallbacks visible in the YouTube baseline. */
 #author-name.owner.yt-live-chat-author-chip { }
@@ -80,9 +89,12 @@ If the design intentionally replaces tier colors, verify amount contrast at ever
 ## Scoping examples
 
 ```css
-/* Safe: repeated IDs are scoped to their component. */
-yt-live-chat-paid-message-renderer #content { }
-yt-live-chat-membership-item-renderer #content { }
+/* Safe and strong enough: scoped to the component, and one step more specific than YouTube's "#content.<scope>". */
+yt-live-chat-paid-message-renderer #content.yt-live-chat-paid-message-renderer { }
+yt-live-chat-membership-item-renderer #content.yt-live-chat-membership-item-renderer { }
+
+/* Scoped but too weak: loses to YouTube's own "#content.yt-live-chat-paid-message-renderer". */
+/* yt-live-chat-paid-message-renderer #content { } */
 
 /* Unsafe: affects many unrelated YouTube components. */
 /* #content { } */
@@ -101,12 +113,12 @@ ytd-sponsorships-live-chat-gift-purchase-announcement-renderer
 Before delivery, exercise every selected type plus these variants where available:
 
 - regular viewer, owner, moderator, and member messages;
-- long author name, multiline text, links, emoji, and missing badge;
+- long author name, multiline text, a link, emoji, and missing badge;
 - membership header-only and membership with message;
 - multiple Super Chat tiers and a Super Sticker;
 - membership gift purchase and redemption as separate renderers;
-- Send Gift classic and V2 when the target exposes both;
-- avatar hidden, deleted/retracted, and menu hidden states;
+- a deleted message;
+- Send Gift (classic and V2) and the `[avatar-hidden]` state only against a real chat: the bundled tester cannot send them;
 - YouTube chrome visibility exactly matching the approved checklist.
 
 If the simulator cannot render a selected variant, state that limitation instead of claiming coverage.

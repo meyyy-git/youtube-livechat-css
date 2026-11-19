@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>YT Chat Tester</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #101214; --panel: #181b1f; --raised: #22262c; --hover: #2b3038; --line: #2e333b;
+    --ink: #eef0f3; --muted: #9ba3ae; --accent: #34d399; --accent-ink: #06281c; --warn: #fca5a5;
+    --radius: 7px;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  /* panel kiri menyempit di jendela kecil supaya pratinjau tetap dapat ruang */
+  body { margin: 0; height: 100vh; display: grid; grid-template: auto auto minmax(0, 1fr) / clamp(190px, 30vw, 300px) minmax(0, 1fr); background: var(--bg); color: var(--ink); font: 13px/1.45 "Segoe UI", system-ui, sans-serif; }
+  h1, h2, p { margin: 0; }
+
+  /* satu keluarga tombol: netral, utama (.primary), dan tombol-daftar (.item) */
+  button, select, input[type=text], input[type=number] {
+    font: inherit; color: var(--ink); background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius);
+    min-height: 32px; padding: 0 10px; white-space: nowrap; transition: background-color 120ms ease-out, border-color 120ms ease-out, transform 120ms ease-out;
+  }
+  button { cursor: pointer; }
+  button:hover, select:hover { background: var(--hover); border-color: #414853; }
+  button:active { transform: scale(0.97); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  button.primary:hover { background: #5be3ae; border-color: #5be3ae; }
+  button[aria-pressed=true] { border-color: var(--accent); color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input::placeholder { color: #747c88; }
+  label.check { display: flex; gap: 7px; align-items: center; min-height: 28px; cursor: pointer; }
+  input[type=checkbox] { flex: none; width: 15px; height: 15px; margin: 0; accent-color: var(--accent); }
+
+  /* ---------- bilah atas: tema ---------- */
+  header { grid-area: 1 / 1 / 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 14px; font-weight: 650; margin-right: 4px; white-space: nowrap; }
+  #themeState { flex: 1 1 160px; display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--muted); }
+  #themeText { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #themeText b { color: var(--ink); font-weight: 600; }
+  .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #5b6370; }
+  .dot.on { background: var(--accent); }
+  .dot.flash { animation: flash 700ms ease-out; }
+  @keyframes flash { from { box-shadow: 0 0 0 0 rgba(52, 211, 153, .7); } to { box-shadow: 0 0 0 10px rgba(52, 211, 153, 0); } }
+  #data { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  #err { grid-area: 2 / 1 / 3 / -1; padding: 8px 14px; color: var(--warn); }
+  #err:empty { display: none; }
+
+  /* ---------- panel kiri ---------- */
+  aside { grid-area: 3 / 1; min-height: 0; overflow: hidden auto; background: var(--panel); border-right: 1px solid var(--line); padding: 0 12px 16px; }
+  .quick { position: sticky; top: 0; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 12px 0 10px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .quick .wide { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+  .quick .wide button { flex: 1 1 110px; }
+  .quick button, .quick select { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  h2 { margin: 14px 0 6px; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; }   /* minmax(0): label panjang dipotong, bukan melebarkan panel */
+  button.item { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 34px; text-align: left; }
+  button.item .dot { width: 9px; height: 9px; }
+  button.item .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .tiers { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .tiers button { width: 30px; min-height: 30px; padding: 0; border-radius: 50%; border: 2px solid transparent; background: var(--c); }
+  .tiers button:hover { background: var(--c); border-color: var(--ink); transform: scale(1.08); }
+  .tiers button:active { transform: scale(0.94); }
+  .hint { color: var(--muted); font-size: 12px; margin: 4px 0 0; }
+  details { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 2px; }
+  summary { cursor: pointer; padding: 9px 0; font-weight: 600; }
+  .field { display: grid; gap: 3px; margin-bottom: 9px; }
+  .field span { font-size: 12px; color: var(--muted); }
+  .field input { width: 100%; }
+
+  /* ---------- area pratinjau ---------- */
+  main { grid-area: 3 / 2; display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; min-height: 0; }
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 14px; border-bottom: 1px solid var(--line); }
+  .bar label { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+  .bar input[type=number] { width: 70px; }
+  .swatches { display: flex; gap: 5px; }
+  .swatches button { width: 26px; min-height: 26px; padding: 0; border-radius: 6px; }
+  .swatches button[aria-pressed=true] { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .work { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; min-height: 0; }
+  #stage { position: relative; overflow: auto; display: grid; place-items: center; padding: 20px; }
+  #stage[data-bg=dark], .swatches [data-bg=dark] { background: linear-gradient(160deg, #3a3f4b, #1f2a44 60%, #33303d); }
+  #stage[data-bg=light], .swatches [data-bg=light] { background: #e7e9ec; }
+  #stage[data-bg=check], .swatches [data-bg=check] { background: repeating-conic-gradient(#3b3b3b 0 25%, #585858 0 50%) 0 0 / 20px 20px; }
+  #stage[data-bg=green], .swatches [data-bg=green] { background: #00b140; }
+  #fit { position: relative; flex: none; outline: 1px dashed rgba(255, 255, 255, .4); }
+  iframe { display: block; border: 0; background: transparent; transform-origin: 0 0; }
+  #empty { position: absolute; inset: 0; display: grid; place-items: center; padding: 10px; text-align: center; pointer-events: none; }
+  #empty div { max-width: 240px; padding: 12px 14px; border-radius: 10px; background: rgba(16, 18, 20, .82); }
+  #empty b { display: block; margin-bottom: 3px; }
+  #empty span { color: var(--muted); font-size: 12px; }
+
+  /* ---------- form tempel CSS ---------- */
+  #editor { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px; width: 380px; min-height: 0; padding: 12px; background: var(--panel); border-left: 1px solid var(--line); }
+  #editor h2 { margin: 0 0 2px; }
+  #editor textarea { width: 100%; height: 100%; resize: none; padding: 9px 11px; border: 1px solid var(--line); border-radius: var(--radius); background: #0c0e10; color: var(--ink); font: 12px/1.5 ui-monospace, Consolas, monospace; white-space: pre; tab-size: 2; }
+  #editor .row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  body.drag::after { content: "Drop the CSS file here"; position: fixed; inset: 10px; z-index: 9; display: grid; place-items: center; border: 2px dashed var(--accent); border-radius: 12px; background: rgba(16, 18, 20, .86); color: var(--accent); font-size: 18px; font-weight: 600; }
+
+  /* jendela sedang: form tempel CSS melayang di atas pratinjau, bukan kolom sendiri */
+  @media (max-width: 1100px) {
+    .work { grid-template-columns: minmax(0, 1fr); }
+    #editor { position: absolute; inset: 0 0 0 auto; z-index: 5; width: min(400px, 100%); box-shadow: -10px 0 30px rgba(0, 0, 0, .45); }
+  }
+  /* jendela sempit: sembunyikan yang tidak penting, rapatkan sisanya */
+  @media (max-width: 760px) {
+    #data, #preset, .lbl { display: none; }
+    header { padding: 6px 10px; }
+    aside { padding: 0 8px 12px; }
+    .bar { padding: 6px 8px; gap: 6px; }
+    .bar input[type=number] { width: 58px; }
+    #stage { padding: 10px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<header>
+  <h1>YT Chat Tester</h1>
+  <button class="primary" id="pick">Choose theme CSS…</button>
+  <button id="pasteBtn" aria-pressed="false">Paste CSS</button>
+  <button id="notheme" hidden>Remove theme</button>
+  <div id="themeState"><i class="dot" id="themeDot"></i><span id="themeText">No theme loaded. Showing YouTube's default chat. You can also drop a CSS file here.</span></div>
+  <input type="file" id="file" accept=".css" hidden>
+  <span id="data"></span>
+</header>
+<p id="err"></p>
+
+<aside>
+  <div class="quick">
+    <div class="wide">
+      <button class="primary" id="auto" aria-pressed="false">▶ Start busy chat</button>
+      <select id="speed" aria-label="Chat speed">
+        <option value="2000">Slow</option><option value="900" selected>Normal</option><option value="350">Fast</option>
+      </select>
+    </div>
+    <button id="all" title="Send one message of every type">One of each</button>
+    <button id="clear">Clear</button>
+  </div>
+
+  <div id="catalog"></div>
+
+  <details id="opts">
+    <summary>Message content</summary>
+    <label class="field"><span>Sender name (leave empty for random)</span><input type="text" id="name" placeholder="e.g. melodi.malam"></label>
+    <label class="field"><span>Message text (leave empty for random)</span><input type="text" id="msg" placeholder="e.g. hello everyone!"></label>
+    <label class="check"><input type="checkbox" id="long"> Very long name and message</label>
+    <label class="check"><input type="checkbox" id="emoji" checked> Add an emoji at the end</label>
+    <label class="check"><input type="checkbox" id="link"> Add a link at the end</label>
+  </details>
+</aside>
+
+<main>
+  <div class="bar">
+    <select id="preset" aria-label="Browser Source size">
+      <option value="420x900">420 × 900 · side chat</option>
+      <option value="400x600">400 × 600 · small box</option>
+      <option value="500x1080">500 × 1080 · full height</option>
+      <option value="custom">Custom size</option>
+    </select>
+    <label><span class="lbl">Width</span> <input type="number" id="w" value="420" min="200" step="10" aria-label="Width" title="Width"></label>
+    <label><span class="lbl">Height</span> <input type="number" id="h" value="900" min="200" step="10" aria-label="Height" title="Height"></label>
+    <button id="fitBtn" aria-pressed="true">Fit</button>
+    <div class="swatches" role="group" aria-label="Preview background">
+      <button data-bg="dark" title="Dark background" aria-label="Dark background"></button>
+      <button data-bg="light" title="Light background" aria-label="Light background"></button>
+      <button data-bg="check" title="Checkerboard (transparent)" aria-label="Checkerboard background"></button>
+      <button data-bg="green" title="Chroma key green" aria-label="Chroma key green background"></button>
+    </div>
+    <label class="check"><input type="checkbox" id="dark"> YouTube dark mode</label>
+  </div>
+  <div class="work">
+    <div id="stage" data-bg="dark">
+      <div id="fit">
+        <iframe id="frame" title="Chat preview"></iframe>
+        <div id="empty"><div><b>No messages yet</b><span>Pick a message type, or press “Start busy chat”.</span></div></div>
+      </div>
+    </div>
+    <section id="editor" hidden>
+      <div>
+        <h2>Paste CSS</h2>
+        <p class="hint">Paste or type CSS here. It applies as you type and is saved in this browser.</p>
+      </div>
+      <textarea id="css" spellcheck="false" aria-label="Theme CSS code" placeholder="/* paste your theme CSS here (Ctrl+V) */"></textarea>
+      <div class="row">
+        <button class="primary" id="clip">Paste from clipboard</button>
+        <button id="copy">Copy</button>
+        <button id="wipe">Clear</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script src="yt-data.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const D = window.YT_DATA;
+if (!D) $('err').textContent = 'yt-data.js is missing from this folder. Capture it first with capture.js (instructions are in the comment at the top of that file).';
+
+// ---------- data tiruan ----------
+const NAMES = ['rizky_ngopi', 'melodi.malam', 'dimas.mod', 'Streamer Name', 'andi.w', 'raka.pratama', 'kopiSusuGulaAren', 'siti_n', 'budi99'];
+const LONG_NAME = 'viewer_with_an_extremely_long_display_name_for_testing';
+const MSGS = ['hello everyone!', 'lol', 'just got here, what are we playing today?', 'your voice sounds great today', "please don't spam links", 'can you sing that song from yesterday?', 'keep it up!', 'w'];
+const LONG_MSG = 'this is a very long message to test line wrapping: hahahahahahahahahahahahahahahahahahahahahahahahahahahahahahahahahaha and then it carries on into another sentence so it fills three or four lines at 420 pixels wide.';
+// 7 tier Super Chat YouTube: [nama, primer, sekunder, teks header, teks nama, nominal contoh].
+// Nilainya dari rekaman chat asli yang lebih lama; di halaman, formatnya rgba(r,g,b,1) tanpa spasi.
+const TIERS = [
+  ['Blue', '30,136,229', '21,101,192', '255,255,255,1', '255,255,255,0.7', 'Rp10.000'],
+  ['Cyan', '0,229,255', '0,184,212', '0,0,0,1', '0,0,0,0.7', 'Rp20.000'],
+  ['Green', '29,233,182', '0,191,165', '0,0,0,1', '0,0,0,0.54', 'Rp50.000'],
+  ['Yellow', '255,202,40', '255,179,0', '0,0,0,0.87', '0,0,0,0.54', 'Rp100.000'],
+  ['Orange', '245,124,0', '230,81,0', '255,255,255,0.87', '255,255,255,0.7', 'Rp200.000'],
+  ['Magenta', '233,30,99', '194,24,91', '255,255,255,1', '255,255,255,0.7', 'Rp500.000'],
+  ['Red', '230,33,23', '208,0,0', '255,255,255,1', '255,255,255,0.7', 'Rp1.000.000'],
+];
+const tierStyle = ([, p, s, h, n], sticker) => sticker
+  ? `--yt-live-chat-paid-sticker-chip-background-color: rgba(${p},1); --yt-live-chat-paid-sticker-chip-text-color: rgba(${h}); --yt-live-chat-paid-sticker-background-color: rgba(${s},1); --yt-live-chat-disable-highlight-message-author-name-color: rgba(${n});`
+  : `--yt-live-chat-paid-message-primary-color: rgba(${p},1); --yt-live-chat-paid-message-secondary-color: rgba(${s},1); --yt-live-chat-paid-message-header-color: rgba(${h}); --yt-live-chat-paid-message-timestamp-color: rgba(${h.replace(/,[\d.]+$/, ',0.5')}); --yt-live-chat-paid-message-color: rgba(${h}); --yt-live-chat-disable-highlight-message-author-name-color: rgba(${n});`;
+
+// Gambar tiruan dibuat berperilaku seperti foto (bitmap) YouTube:
+// - width/height 48: ukuran aslinya 48px, bukan 300px bawaan SVG;
+// - preserveAspectRatio none: ikut melar mengisi kotaknya. Di superchat YouTube asli, <img> avatar berukuran
+//   32×40 di dalam lingkaran 32×32; foto melar mengisi, sedangkan SVG biasa akan menyisakan pita kosong di atas.
+const svg = s => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 64 64" preserveAspectRatio="none">${s}</svg>`);
+const COLORS = ['#8fb7d9', '#e9a0c4', '#f2b87e', '#8fd3b0', '#6aa9d6', '#d9a08f'];
+const avatar = name => svg(`<rect width="64" height="64" fill="${COLORS[name.length % COLORS.length]}"/><text x="32" y="43" font-size="30" font-family="Arial" font-weight="700" text-anchor="middle" fill="#fff">${(name.replace(/[^a-z0-9]/gi, '')[0] || '?').toUpperCase()}</text>`);
+const IMG = {
+  badge: svg('<rect width="64" height="64" rx="10" fill="#2ba640"/><path fill="#fff" d="M32 10l6.5 14.5 15.5 1.8-11.5 10.7 3.2 15.5L32 44.8 18.3 52.5l3.2-15.5L10 26.300l15.500-1.800z"/>'),
+  emoji: svg('<circle cx="32" cy="32" r="30" fill="#ffd23f"/><circle cx="22" cy="26" r="4" fill="#4a1639"/><circle cx="42" cy="26" r="4" fill="#4a1639"/><path d="M18 38q14 14 28 0" fill="none" stroke="#4a1639" stroke-width="5" stroke-linecap="round"/>'),
+  other: svg('<rect width="64" height="64" rx="14" fill="#ec6fae"/><path fill="#fff" d="M32 52S10 38 10 23a11 11 0 0 1 22-3 11 11 0 0 1 22 3c0 15-22 29-22 29z"/>'),
+};
+const ICON = {
+  moderator: '<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M9.6 1.5a4 4 0 0 0-3.5 5.700L1.500 11.800V14.500h2.700l4.600-4.600A4 4 0 0 0 14.500 6.400l-2.300 2.300-2.200-.7-.700-2.200 2.300-2.300a4 4 0 0 0-2-2z"/></svg>',
+  verified: '<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M6.500 12.200L2.800 8.500l1.400-1.400 2.300 2.300 5.300-5.300 1.400 1.400z"/></svg>',
+};
+const pickOf = a => a[Math.random() * a.length | 0];
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const clock = () => new Date().toLocaleTimeString('en-GB');
+const store = { get: k => { try { return JSON.parse(localStorage.getItem('yct:' + k)); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem('yct:' + k, JSON.stringify(v)); } catch (e) {} } };
+const note = t => { $('err').textContent = t; setTimeout(() => $('err').textContent = '', 4000); };
+
+// ---------- dokumen chat di dalam iframe: kerangka asli YouTube + CSS bawaan + tema ----------
+let doc, items, scroller, themeEl;
+function build() {
+  doc = $('frame').contentDocument;
+  doc.open(); doc.write('<!doctype html><html><head><meta charset="utf-8"></head><body></body></html>'); doc.close();
+  const set = (el, attrs) => Object.entries(attrs).forEach(([k, v]) => {
+    if (k === 'style' && /^(item-offset|items)$/.test(attrs.id || '')) return;   // tinggi & transform ini diisi JS YouTube
+    try { el.setAttribute(k, v); } catch (e) {}
+  });
+  const [[, htmlA], [, bodyA], ...rest] = D.shell;
+  set(doc.documentElement, htmlA); set(doc.body, bodyA);
+  let parent = doc.body;
+  for (const [tag, attrs] of rest) { const e = doc.createElement(tag); set(e, attrs); parent.append(e); parent = e; }
+  items = parent;
+  scroller = doc.querySelector('#item-scroller');
+  const style = (css, id) => { const s = doc.createElement('style'); s.id = id; s.textContent = css; doc.head.append(s); return s; };
+  style(D.css, 'yt-base');
+  // Pengganti bagian yang di YouTube diatur JavaScript: tinggi #item-offset dan posisi #items.
+  // Tinggi <html> dan <body> sengaja TIDAK diatur. Di YouTube keduanya hanya setinggi isinya (yt-live-chat-app, 100vh),
+  // jadi tema yang mengecilkan app lalu menskalakannya dengan transform terpotong oleh <body> di sini juga, sama seperti
+  // di OBS. Dulu baris ini memberi height: 100% dan menyembunyikan bug itu.
+  style(`html, body { margin: 0; }
+    #item-offset.yt-live-chat-item-list-renderer { height: auto !important; min-height: 100% !important; display: flex; flex-direction: column; justify-content: flex-end; }
+    #items.yt-live-chat-item-list-renderer { position: static !important; transform: none !important; flex: none; }`, 'tester-fix');
+  themeEl = style('', 'theme');   // paling akhir, seperti Custom CSS di OBS
+  $('dark').checked = doc.documentElement.hasAttribute('dark');
+}
+
+// ---------- membuat satu pesan dari templat hasil rekaman ----------
+function render(key, tier, o = {}) {
+  const tag = key.split(/[\[|]/)[0];
+  const long = o.long ?? $('long').checked;
+  const name = o.name || $('name').value || (long ? LONG_NAME : pickOf(NAMES));
+  let text = esc(o.message || $('msg').value || (long ? LONG_MSG : pickOf(MSGS)));
+  // Emoji direkam dari pesan chat biasa. YouTube mengatur ukurannya lewat kelas scope renderer tempat ia berada
+  // (mis. "#content.yt-live-chat-membership-item-renderer img.yt-live-chat-membership-item-renderer"),
+  // jadi kelas scope-nya harus diganti ke renderer yang sedang dibuat; kalau tidak, emoji tampil sebesar gambar aslinya.
+  if ((o.emoji ?? $('emoji').checked) && D.emoji) text += ' ' + D.emoji.replace(/\{\{img:[^}]+\}\}/, IMG.emoji).replace(/yt-live-chat-text-message-renderer/g, tag);
+  if ((o.link ?? $('link').checked) && D.link) text += ' ' + D.link.replace('{{text}}', 'https://example.com');
+  // Teks yang di YouTube terdiri dari beberapa potongan (runs) punya beberapa penanda beruntun:
+  // potongan pertama diisi, sisanya dikosongkan.
+  const seq = {
+    message: tag.includes('gift-redemption') ? ['received a gift membership by ', esc(pickOf(NAMES))] : [text],
+    'header-primary-text': [o.milestoneText || `Member for ${pickOf([2, 6, 12, 24])} months`],
+    'header-subtext': [o.subtext || (key.includes('has-primary-header-text') ? 'Main Tier' : 'Welcome to Main Tier!')],
+    'primary-text': [o.giftText || `Sent ${pickOf([1, 5, 10, 20])} Channel Name gift memberships`],
+  };
+  const amount = o.amount || (tier ? tier[5] : 'Rp20.000');
+  const val = {
+    'author-name': esc(name), timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+    'purchase-amount': amount, 'purchase-amount-chip': amount, 'deleted-state': '[message deleted]', 'action-button': 'Learn more',
+  };
+  const html = D.templates[key].replace(/\{\{(img:)?([^}]+)\}\}/g, (m, img, id) => {
+    if (img) return id === 'author-photo' ? avatar(name) : id === 'image' ? IMG.badge : IMG.other;
+    if (seq[id]) return seq[id].shift() || '';
+    return id in val ? val[id] : `[${id}]`;   // penanda yang belum dikenal ditampilkan apa adanya
+  });
+  const box = doc.createElement('template');
+  box.innerHTML = html;
+  const el = box.content.firstElementChild;
+  el.id = 'm' + Date.now().toString(36) + (Math.random() * 1e4 | 0);
+  if (tier) el.setAttribute('style', tierStyle(tier, tag.includes('sticker')));
+  // Dua hal yang di YouTube dikerjakan JavaScript setelah elemen dibuat:
+  el.querySelectorAll('#sticker-container').forEach(c => c.classList.add('sticker-loaded'));   // tanpa kelas ini sticker tetap opacity 0.1
+  el.querySelectorAll('yt-live-chat-author-badge-renderer yt-icon').forEach(i => {              // ikon badge moderator / verified
+    const type = i.closest('yt-live-chat-author-badge-renderer').getAttribute('type');
+    if (!i.querySelector('svg') && ICON[type]) (i.querySelector('span') || i).innerHTML = ICON[type];
+  });
+  items.append(el);
+  while (items.children.length > 120) items.firstElementChild.remove();
+  scroller.scrollTop = scroller.scrollHeight;
+  $('empty').hidden = true;
+}
+
+// ---------- katalog: nama tetap untuk tiap varian yang terekam (dipakai tombol dan T.send) ----------
+const find = test => Object.keys(D ? D.templates : {}).find(test);
+const KEYS = {
+  viewer: find(k => /text-message-renderer\[author-type\]$/.test(k)),
+  member: find(k => k.includes('[author-type=member]')),
+  moderator: find(k => /=moderator\]\|badge:moderator$/.test(k)),
+  moderatorMember: find(k => k.endsWith('badge:moderator+member')),
+  owner: find(k => k.includes('[author-type=owner]')),
+  verified: find(k => k.includes('badge:verified')),
+  deleted: find(k => k.includes('[is-deleted]')),
+  superchat: find(k => k.includes('paid-message') && k.includes('|msg')),
+  superchatNoMessage: find(k => k.includes('paid-message') && k.includes('|nomsg')),
+  sticker: find(k => k.includes('paid-sticker')),
+  newMember: find(k => k.includes('membership-item') && !k.includes('has-primary-header-text')),
+  milestone: find(k => k.includes('membership-item') && k.includes('has-primary-header-text') && k.includes('nomsg')),
+  milestoneMessage: find(k => k.includes('membership-item') && k.includes('has-primary-header-text') && k.includes('|msg')),
+  giftPurchase: find(k => k.includes('gift-purchase')),
+  giftReceived: find(k => k.includes('gift-redemption')),
+  sendGift: find(k => k.includes('yt-gift-message')),
+  system: find(k => k.includes('viewer-engagement')),
+};
+const chatSenders = [], eventSenders = [], once = [];   // once: satu wakil tiap jenis untuk tombol "One of each"
+function catalog() {
+  const root = $('catalog');
+  const group = title => { const h = document.createElement('h2'); h.textContent = title; const l = document.createElement('div'); l.className = 'list'; root.append(h, l); return l; };
+  const row = (list, label, send, color, pool) => {
+    const b = document.createElement('button'); b.className = 'item'; b.title = label;
+    const d = document.createElement('i'); d.className = 'dot'; d.style.background = color || '#5b6370';
+    const t = document.createElement('span'); t.className = 't'; t.textContent = label;
+    b.append(d, t); b.onclick = send; list.append(b); pool.push(send); once.push(send);
+  };
+  const rows = (title, defs, pool) => {
+    const found = defs.filter(d => KEYS[d[1]]);
+    if (!found.length) return;
+    const list = group(title);
+    found.forEach(([label, name, color]) => row(list, label, () => render(KEYS[name]), color, pool));
+  };
+  const tiers = (title, key, extra) => {
+    if (!key) return;
+    const list = group(title), wrap = document.createElement('div'); wrap.className = 'tiers';
+    TIERS.forEach(t => {
+      const b = document.createElement('button'); b.style.setProperty('--c', `rgb(${t[1]})`);
+      b.title = `${t[0]} · ${t[5]}`; b.setAttribute('aria-label', `${title} ${t[0]} ${t[5]}`);
+      const send = () => render(typeof key === 'function' ? key() : key, t);
+      b.onclick = send; wrap.append(b); eventSenders.push(send); if (t === TIERS[3]) once.push(send);
+    });
+    list.append(wrap);
+    if (extra) { const p = document.createElement('p'); p.className = 'hint'; p.textContent = 'Each colour is one price tier, from Rp10.000 to Rp1.000.000.'; list.append(extra, p); }
+  };
+
+  rows('Chat', [['Viewer', 'viewer', '#9ba3ae'], ['Member', 'member', '#2ba640'], ['Moderator', 'moderator', '#5e84f1'], ['Moderator + member', 'moderatorMember', '#5e84f1'],
+    ['Owner', 'owner', '#ffd600'], ['Verified', 'verified', '#9ba3ae'], ['Deleted message', 'deleted', '#5b6370']], chatSenders);
+  let withMsg = null;
+  if (KEYS.superchat && KEYS.superchatNoMessage) {
+    withMsg = document.createElement('label'); withMsg.className = 'check';
+    withMsg.innerHTML = '<input type="checkbox" id="scmsg" checked> Include a message';
+  }
+  tiers('Super Chat', withMsg ? () => ($('scmsg').checked ? KEYS.superchat : KEYS.superchatNoMessage) : KEYS.superchat || KEYS.superchatNoMessage, withMsg);
+  tiers('Super Sticker', KEYS.sticker);
+  rows('Membership', [['New member', 'newMember', '#2ba640'], ['Milestone', 'milestone', '#2ba640'], ['Milestone with message', 'milestoneMessage', '#2ba640']], eventSenders);
+  rows('Gift memberships', [['Gift purchase', 'giftPurchase', '#ec6fae'], ['Gift received', 'giftReceived', '#ec6fae']], eventSenders);
+  rows('Other', [['Send Gift', 'sendGift', '#ec6fae'], ['YouTube system message', 'system']], []);
+  // varian baru dari rekaman berikutnya yang belum punya nama: tampil dengan kunci aslinya
+  const known = new Set(Object.values(KEYS)), rest = Object.keys(D.templates).filter(k => !known.has(k) && !k.includes('placeholder'));
+  if (rest.length) { const list = group('Other captured variants'); rest.forEach(k => row(list, k.replace(/^yt-live-chat-|^ytd-sponsorships-live-chat-/, ''), () => render(k), null, [])); }
+}
+
+// ---------- tema dari file: dipantau dan dimuat ulang saat berubah; pilihan terakhir diingat ----------
+const idb = (mode, fn) => new Promise((res, rej) => {
+  const o = indexedDB.open('yt-chat-tester', 1);
+  o.onupgradeneeded = () => o.result.createObjectStore('kv');
+  o.onerror = () => rej(o.error);
+  o.onsuccess = () => { const r = fn(o.result.transaction('kv', mode).objectStore('kv')); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); };
+});
+const NO_THEME = "No theme loaded. Showing YouTube's default chat.";
+let handle = null, stamp = 0;
+function themeUI(name, text) {
+  $('themeDot').classList.toggle('on', !!name);
+  $('themeText').innerHTML = name ? `<b>${esc(name)}</b> · ${esc(text)}` : esc(text);
+  $('themeText').title = name ? `${name} · ${text}` : text;
+  $('pick').textContent = name ? 'Change theme…' : 'Choose theme CSS…';
+  $('pick').classList.toggle('primary', !name);
+  $('notheme').hidden = !name;
+  if (name) { $('themeDot').classList.remove('flash'); void $('themeDot').offsetWidth; $('themeDot').classList.add('flash'); }
+}
+function setTheme(css, name, text) { themeEl.textContent = css; if ($('css').value !== css) $('css').value = css; themeUI(name, text); }
+async function reload() {
+  if (!handle) return;
+  try {
+    const f = await handle.getFile();
+    if (f.lastModified === stamp) return;
+    stamp = f.lastModified;
+    setTheme(await f.text(), f.name, `loaded ${clock()} · reloads on save`);
+  } catch (e) { themeUI(null, 'The theme file can no longer be read: ' + e.message); handle = null; }
+}
+async function useHandle(h) { handle = h; stamp = 0; store.set('source', 'file'); await reload(); idb('readwrite', s => s.put(h, 'theme')).catch(() => {}); }
+async function useFile(f) { handle = null; store.set('source', null); setTheme(await f.text(), f.name, 'loaded once · choose it again after editing'); }
+const pickFresh = async () => {
+  if (!window.showOpenFilePicker) return $('file').click();   // browser tanpa File System Access: tanpa muat ulang otomatis
+  try { const [h] = await showOpenFilePicker({ types: [{ description: 'CSS', accept: { 'text/css': ['.css'] } }] }); useHandle(h); } catch (e) {}
+};
+$('pick').onclick = pickFresh;
+$('file').onchange = e => e.target.files[0] && useFile(e.target.files[0]);
+$('notheme').onclick = () => { handle = null; store.set('source', null); store.set('paste', ''); idb('readwrite', s => s.delete('theme')).catch(() => {}); setTheme('', null, "Theme removed. Showing YouTube's default chat."); };
+setInterval(reload, 1000);
+// seret file CSS ke jendela
+let dragDepth = 0;
+addEventListener('dragenter', e => { e.preventDefault(); dragDepth++; document.body.classList.add('drag'); });
+addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('drag'); } });
+addEventListener('dragover', e => e.preventDefault());
+addEventListener('drop', async e => {
+  e.preventDefault(); dragDepth = 0; document.body.classList.remove('drag');
+  const it = e.dataTransfer.items[0], f = e.dataTransfer.files[0];
+  if (!f || !/\.css$/i.test(f.name)) return note('That is not a .css file.');
+  const h = it.getAsFileSystemHandle ? await it.getAsFileSystemHandle().catch(() => null) : null;
+  h ? useHandle(h) : useFile(f);
+});
+// sumber terakhir dipulihkan: tempelan langsung; file langsung kalau izin masih ada, kalau tidak tawarkan satu klik
+async function restore() {
+  if (store.get('source') === 'paste') { const css = store.get('paste'); if (css) { $('css').value = css; applyPaste(); } return; }
+  const h = await idb('readonly', s => s.get('theme')).catch(() => null);
+  if (!h) return;
+  if (await h.queryPermission({ mode: 'read' }) === 'granted') return useHandle(h);
+  $('pick').textContent = `Reopen ${h.name}`;
+  $('pick').onclick = async () => { $('pick').onclick = pickFresh; if (await h.requestPermission({ mode: 'read' }) === 'granted') useHandle(h); else themeUI(null, NO_THEME); };
+}
+
+// ---------- form tempel CSS: sumber tema kedua selain file ----------
+function applyPaste() {
+  const css = $('css').value;
+  handle = null;   // berhenti memantau file: yang berlaku sekarang isi kotak ini
+  store.set('paste', css); store.set('source', css.trim() ? 'paste' : null);
+  if (css.trim()) setTheme(css, 'Pasted CSS', `${css.split(/\n/).length} lines · applies as you type`);
+  else setTheme('', null, NO_THEME);
+}
+function openEditor(open, focus) {
+  $('editor').hidden = !open; $('pasteBtn').setAttribute('aria-pressed', open); store.set('editor', open); layout();
+  if (open && focus) $('css').focus();
+}
+$('pasteBtn').onclick = () => openEditor($('editor').hidden, true);
+let typing;
+$('css').oninput = () => { clearTimeout(typing); typing = setTimeout(applyPaste, 250); };
+$('clip').onclick = async () => {
+  try { $('css').value = await navigator.clipboard.readText(); applyPaste(); }
+  catch (e) { note('The browser blocked clipboard access. Click the text box and press Ctrl+V.'); $('css').focus(); }
+};
+$('copy').onclick = () => navigator.clipboard.writeText($('css').value).then(() => { $('copy').textContent = 'Copied'; setTimeout(() => $('copy').textContent = 'Copy', 1500); }, () => note('Copy failed. Select the text and press Ctrl+C.'));
+$('wipe').onclick = () => { $('css').value = ''; applyPaste(); };
+
+// ---------- pratinjau: ukuran, skala, latar ----------
+function layout() {
+  const W = +$('w').value || 420, H = +$('h').value || 900, fit = $('fitBtn').getAttribute('aria-pressed') === 'true';
+  const pad = parseFloat(getComputedStyle($('stage')).paddingLeft) * 2;
+  const s = fit ? Math.max(0.1, Math.min(1, ($('stage').clientWidth - pad) / W, ($('stage').clientHeight - pad) / H)) : 1;
+  Object.assign($('frame').style, { width: W + 'px', height: H + 'px', transform: `scale(${s})` });
+  Object.assign($('fit').style, { width: W * s + 'px', height: H * s + 'px' });
+  $('fitBtn').textContent = fit ? `Fit · ${Math.round(s * 100)}%` : 'Actual size';
+  $('fitBtn').title = fit ? 'Preview is scaled to fit. Click for actual size.' : 'Preview is at 100%. Click to scale it to fit.';
+  const p = `${W}x${H}`; $('preset').value = [...$('preset').options].some(o => o.value === p) ? p : 'custom';
+  store.set('view', { W, H, fit, bg: $('stage').dataset.bg });
+}
+$('preset').onchange = e => { if (e.target.value !== 'custom') { [$('w').value, $('h').value] = e.target.value.split('x'); layout(); } else $('w').focus(); };
+$('w').oninput = $('h').oninput = layout;
+$('fitBtn').onclick = e => { e.currentTarget.setAttribute('aria-pressed', e.currentTarget.getAttribute('aria-pressed') !== 'true'); layout(); };
+const setBg = bg => { $('stage').dataset.bg = bg; document.querySelectorAll('.swatches button').forEach(b => b.setAttribute('aria-pressed', b.dataset.bg === bg)); };
+document.querySelectorAll('.swatches button').forEach(b => b.onclick = () => { setBg(b.dataset.bg); layout(); });
+new ResizeObserver(layout).observe($('stage'));
+$('dark').onchange = e => [doc.documentElement, doc.querySelector('yt-live-chat-app')].forEach(el => el.toggleAttribute('dark', e.target.checked));
+
+// ---------- kirim ----------
+$('clear').onclick = () => { items.replaceChildren(); $('empty').hidden = false; };
+$('all').onclick = () => once.forEach((s, i) => setTimeout(s, i * 300));
+let timer = null;
+function auto(on) {
+  clearInterval(timer); timer = null;
+  if (on) timer = setInterval(() => pickOf(Math.random() < 0.85 ? chatSenders : eventSenders)(), +$('speed').value);   // kebanyakan chat biasa, sesekali event
+  $('auto').setAttribute('aria-pressed', on);
+  $('auto').textContent = on ? '■ Stop' : '▶ Start busy chat';
+  $('auto').classList.toggle('primary', !on);
+}
+$('auto').onclick = () => auto(!timer);
+$('speed').onchange = () => timer && auto(true);
+
+if (D) {
+  const v = store.get('view'), bgs = ['dark', 'light', 'check', 'green'];
+  if (v) { $('w').value = v.W; $('h').value = v.H; $('fitBtn').setAttribute('aria-pressed', v.fit); }
+  setBg(v && bgs.includes(v.bg) ? v.bg : 'dark');
+  build(); catalog(); layout(); restore();
+  if (store.get('editor') && matchMedia('(min-width: 1101px)').matches) openEditor(true, false);   // di jendela sempit form menutupi pratinjau, jadi tidak dibuka sendiri
+  $('data').textContent = `YouTube structure as of ${new Date(D.capturedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  $('data').title = 'Date the element structure and default CSS were captured from YouTube. To refresh, run capture.js (see the comment at the top of that file).';
+  // API untuk uji otomatis (scripts/check-theme.mjs) dan console:
+  //   T.send('superchat', { tier: 3, name: 'x', message: 'y', long: false, emoji: true, link: false })
+  //   teks yang ditulis YouTube bisa diisi sendiri: amount, giftText, milestoneText, subtext
+  //   nama yang tersedia: Object.keys(T.KEYS); tier: indeks 0-6 ke T.TIERS
+  window.T = {
+    D, KEYS, TIERS, render,
+    send: (name, o = {}) => render(KEYS[name] || name, o.tier == null ? undefined : TIERS[o.tier], o),
+    clear: () => $('clear').click(),
+    setTheme: (css, name) => setTheme(css, name || (css ? 'test theme' : null), css ? 'loaded from the console' : NO_THEME),
+    setSize: (w, h) => { $('w').value = w; $('h').value = h; $('fitBtn').setAttribute('aria-pressed', 'false'); layout(); },
+    setBackground: bg => { setBg(bg); layout(); },
+    get doc() { return doc; },
+  };
+}
+</script>
+</html>

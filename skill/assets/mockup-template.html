@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Live chat theme mockup</title>
+<!-- A design mockup, not the deliverable. It uses plain classes so the look can change fast.
+     Keep to what CSS can do on YouTube's elements: one name, one badge slot, one message, two pseudo-elements each.
+     Dashed boxes mark what YouTube supplies (avatar photo, badge image, milestone and gift text). -->
+<style>
+  :root {
+    /* tokens: replace with the theme's palette and fonts, then reuse the same names in the CSS file */
+    --base: #2b2f3a; --surface: #ffffff; --ink: #1c1f26; --accent: #ffb224; --muted: #8b93a1;
+    --radius: 10px; --gap: 12px;
+    --font-display: "Segoe UI", system-ui, sans-serif;
+    --font-text: "Segoe UI", system-ui, sans-serif;
+  }
+  body { margin: 0; padding: 20px; background: #15171c; color: #e9ebef; font: 13px/1.4 var(--font-text); }
+  h2 { margin: 0 0 10px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .wrap { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  /* the stage pretends to be the stream behind a transparent browser source */
+  .stage { display: flex; flex-direction: column; gap: var(--gap); width: 420px; max-width: 100%; box-sizing: border-box; padding: 16px; border-radius: 12px; background: linear-gradient(160deg, #3a3f4b, #1f2a44 60%, #33303d); }
+  .swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 420px; max-width: 100%; }
+  .swatches div { height: 48px; border-radius: 8px; padding: 5px 7px; font-size: 10px; display: flex; align-items: flex-end; }
+  .yt { border: 1px dashed currentColor; opacity: .7; }   /* supplied by YouTube */
+
+  /* ---- chat message ---- */
+  .msg { align-self: flex-start; max-width: 100%; padding: 8px 12px; border-radius: var(--radius); background: var(--surface); color: var(--ink); }
+  .msg .name { display: flex; gap: 6px; align-items: center; font: 600 12px var(--font-display); color: var(--muted); }
+  .msg .badge { width: 14px; height: 14px; border-radius: 3px; }
+  .msg p { margin: 2px 0 0; font-size: 15px; line-height: 21px; overflow-wrap: anywhere; }
+  .msg.member { border-left: 4px solid var(--accent); }
+  .msg.mod { border-left: 4px solid #5e84f1; }
+  .msg.owner { background: var(--accent); }
+
+  /* ---- big cards: Super Chat, membership, gift ---- */
+  .card { border-radius: var(--radius); overflow: hidden; background: var(--surface); color: var(--ink); }
+  .card .head { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--accent); }
+  .card .avatar { flex: none; width: 36px; height: 36px; border-radius: 50%; }
+  .card .who { font: 600 13px var(--font-display); }
+  .card .amount { margin-left: auto; font: 700 16px var(--font-display); }
+  .card .body { padding: 8px 12px; font-size: 15px; line-height: 21px; }
+  .note { align-self: center; padding: 3px 10px; border-radius: 6px; background: var(--surface); color: var(--ink); font-size: 12px; }
+</style>
+
+<div class="wrap">
+  <div>
+    <h2>Palette</h2>
+    <div class="swatches">
+      <div style="background:var(--base)">base</div>
+      <div style="background:var(--surface);color:var(--ink)">surface</div>
+      <div style="background:var(--ink)">ink</div>
+      <div style="background:var(--accent);color:var(--ink)">accent</div>
+      <div style="background:var(--muted);color:var(--ink)">muted</div>
+    </div>
+  </div>
+
+  <div>
+    <h2>Chat</h2>
+    <div class="stage">
+      <div class="msg"><div class="name">viewer_name</div><p>just got here, what are we playing today?</p></div>
+      <div class="msg member"><div class="name">member_name <span class="badge yt" title="YouTube badge image"></span></div><p>a longer message that wraps onto a second line to show how the bubble grows</p></div>
+      <div class="msg mod"><div class="name">moderator_name <span class="badge yt" title="YouTube badge image"></span></div><p>please don't spam links</p></div>
+      <div class="msg owner"><div class="name">Streamer Name</div><p>ok, one more song after this!</p></div>
+      <div class="msg"><div class="name">verified_name <span class="badge yt" title="YouTube verified icon"></span></div><p>hello from another channel</p></div>
+      <div class="msg"><div class="name">viewer_with_an_extremely_long_display_name_for_testing</div><p>w</p></div>
+    </div>
+  </div>
+
+  <div>
+    <h2>Super Chat, membership, gifts</h2>
+    <div class="stage">
+      <!-- Super Chat: YouTube gives avatar, name, amount (in that order) and an optional message.
+           Seven YouTube tiers; show the two or three levels the theme maps them onto. -->
+      <div class="card"><div class="head"><span class="avatar yt" title="YouTube avatar"></span><span class="who">viewer_name</span><span class="amount">Rp20.000</span></div><div class="body">level 1 (blue, cyan, green) · for an iced coffee</div></div>
+      <div class="card"><div class="head"><span class="avatar yt"></span><span class="who">member_name</span><span class="amount">Rp100.000</span></div><div class="body">level 2 (yellow, orange)</div></div>
+      <div class="card"><div class="head"><span class="avatar yt"></span><span class="who">viewer_name</span><span class="amount">Rp500.000</span></div></div>
+      <!-- Super Sticker: avatar, name, amount chip, and the sticker picture (YouTube's, about 72px) -->
+      <div class="card"><div class="head"><span class="avatar yt"></span><span class="who">viewer_name</span><span class="amount">Rp50.000</span><span class="avatar yt" style="border-radius:8px;width:56px;height:56px" title="YouTube sticker"></span></div></div>
+      <!-- New member: YouTube writes one line of its own ("Welcome to <tier>!"). "Welcome" here is a label the theme adds. -->
+      <div class="card"><div class="head"><span class="avatar yt"></span><span class="who">Welcome · member_name</span><span class="amount yt" style="font-size:11px;padding:0 6px">Welcome to Main Tier!</span></div></div>
+      <!-- Milestone: YouTube writes "Member for N months" and the tier name; a message is optional -->
+      <div class="card"><div class="head"><span class="avatar yt"></span><span class="who">Welcome back · member_name</span><span class="amount yt" style="font-size:11px;padding:0 6px">Member for 6 months</span></div><div class="body">a year already, keep going!</div></div>
+      <!-- Gift purchase: YouTube writes the count text -->
+      <div class="card"><div class="head"><span class="avatar yt"></span><span class="who">Thank you · gifter_name</span><span class="amount yt" style="font-size:11px;padding:0 6px">Sent 5 Channel Name gift memberships</span></div></div>
+      <div class="note">viewer_name received a gift membership by gifter_name</div>
+    </div>
+  </div>
+</div>
+</html>

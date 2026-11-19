@@ -1,0 +1,100 @@
+/* YouTube Live Chat theme starter. Paste the finished file into OBS Browser Source > Custom CSS.
+   This block is the part every theme repeats and carries the default visibility rules.
+   Any @import (web fonts) must stay above everything else in the final file.
+
+   Selector form used throughout: "renderer #id.renderer". YouTube writes its own rules as "#id.renderer",
+   so a theme needs the same scope class plus the renderer in front to win without !important. */
+
+/* ---------- 1. Transparent page: the stream shows through ---------- */
+html, body, yt-live-chat-app, yt-live-chat-renderer, yt-live-chat-item-list-renderer,
+#item-list.yt-live-chat-renderer, #item-scroller.yt-live-chat-item-list-renderer,
+#item-offset.yt-live-chat-item-list-renderer, #contents.yt-live-chat-item-list-renderer,
+#items.yt-live-chat-item-list-renderer {
+  background: transparent !important;
+  overflow: hidden !important;   /* also removes the scrollbar gutter */
+}
+/* On the real page <html> and <body> are only as tall as yt-live-chat-app. A theme that shrinks the app and scales it
+   back up with transform (see "Scale" in SKILL.md) would have its bottom cut off by <body>, newest messages first. */
+html, body {
+  height: 100% !important;
+}
+
+/* ---------- 2. YouTube chrome: header, ticker, input, banners, notices, reactions ---------- */
+yt-live-chat-header-renderer,
+#ticker.yt-live-chat-renderer, yt-live-chat-ticker-renderer,
+#input-panel.yt-live-chat-renderer, yt-live-chat-message-input-renderer,
+yt-live-chat-restricted-participation-renderer,
+yt-live-chat-banner-manager,
+yt-live-chat-action-panel-renderer,
+yt-live-chat-viewer-engagement-message-renderer,
+yt-live-chat-mode-change-message-renderer,
+yt-live-chat-placeholder-item-renderer,
+yt-reaction-control-panel-overlay-view-model, yt-emoji-fountain-view-model,
+#show-more.yt-live-chat-item-list-renderer,
+#panel-pages.yt-live-chat-renderer, #separator.yt-live-chat-renderer,
+yt-live-chat-app ::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* ---------- 3. Per-message interface nobody needs on stream ---------- */
+#items.yt-live-chat-item-list-renderer :is(#timestamp, #menu, #inline-action-button-container, #show-original,
+    #before-content-buttons, #leaderboard-badge, #creator-heart-button, #footer, #action-buttons, #input-container,
+    #lower-bumper, #lower-buy-button, #buy-flow-button, #gradient-container) {
+  display: none !important;
+}
+
+/* ---------- 4. Deleted or retracted messages: YouTube keeps them as "[message deleted]"; hide the whole item ---------- */
+#items.yt-live-chat-item-list-renderer > [is-deleted] {
+  display: none !important;
+}
+
+/* ---------- 5. Shared reset for every message the theme styles ----------
+   !important is used here, and only here, on purpose: YouTube sets display, margin, padding and background on
+   these renderers through many attribute variants, and one forced reset is simpler than out-specifying each.
+   Change spacing through the two variables instead of fighting the reset:
+     yt-live-chat-paid-message-renderer { --msg-margin: 20px 16px 12px 30px; } */
+yt-live-chat-text-message-renderer,
+yt-live-chat-paid-message-renderer,
+yt-live-chat-paid-sticker-renderer,
+yt-live-chat-membership-item-renderer,
+ytd-sponsorships-live-chat-gift-purchase-announcement-renderer,
+ytd-sponsorships-live-chat-gift-redemption-announcement-renderer,
+yt-gift-message-view-model {
+  position: relative;
+  display: block !important;
+  box-sizing: border-box;
+  margin: var(--msg-margin, 0 0 12px) !important;
+  padding: var(--msg-padding, 0) !important;
+  background: transparent !important;
+  overflow: visible !important;   /* ornaments may stick out of a message */
+  contain: none !important;
+}
+
+/* ---------- 6. Default visibility of YouTube-supplied pictures ---------- */
+/* Avatar on ordinary chat and on the small "gift received" line: hidden. Delete a line to show it. */
+yt-live-chat-text-message-renderer #author-photo.yt-live-chat-text-message-renderer,
+ytd-sponsorships-live-chat-gift-redemption-announcement-renderer #author-photo.ytd-sponsorships-live-chat-gift-redemption-announcement-renderer {
+  display: none !important;
+}
+/* YouTube's stock gift artwork on a gift purchase, and its gift icon on the "gift received" line: hidden. */
+ytd-sponsorships-live-chat-header-renderer .rhs-image.ytd-sponsorships-live-chat-header-renderer,
+ytd-sponsorships-live-chat-gift-redemption-announcement-renderer #gift-icon.ytd-sponsorships-live-chat-gift-redemption-announcement-renderer {
+  display: none !important;
+}
+/* Avatars that stay (Super Chat, Super Sticker, membership, gift purchase): the <img> must fill its frame.
+   On a Super Chat YouTube leaves it 32 x 40 inside a 32 x 32 circle. */
+:is(yt-live-chat-paid-message-renderer, yt-live-chat-paid-sticker-renderer, yt-live-chat-membership-item-renderer,
+    ytd-sponsorships-live-chat-header-renderer) #author-photo img.yt-img-shadow {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Emoji follow the line height instead of YouTube's fixed size */
+:is(yt-live-chat-text-message-renderer, yt-live-chat-paid-message-renderer, yt-live-chat-membership-item-renderer) #message img.emoji {
+  width: auto !important;
+  height: 1.4em !important;
+  vertical-align: -0.35em;
+}
+
+/* ---------- theme starts here ---------- */

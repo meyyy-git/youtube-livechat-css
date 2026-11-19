@@ -4,6 +4,8 @@ Installs the `$youtube-livechat-css` Agent Skill for designing one-file YouTube 
 
 The skill includes a scoped element guide for current YouTube chat renderers, nested IDs, role states, membership gifts, Send Gift, Super Chat, and Super Sticker.
 
+It also bundles a local tester built from YouTube's real element structure and base CSS, a starter stylesheet, a mockup template, a list of known pitfalls, and a headless check that runs a theme through every message type.
+
 ```bash
 npx youtube-livechat-css-skill
 ```
