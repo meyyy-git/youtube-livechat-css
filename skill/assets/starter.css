@@ -35,6 +35,26 @@ yt-reaction-control-panel-overlay-view-model, yt-emoji-fountain-view-model,
 yt-live-chat-app ::-webkit-scrollbar {
   display: none !important;
 }
+/* Whatever else YouTube puts beside the message list. The list above names what is known; this keeps only the path
+   down to the messages, so an element that is not on the list (it showed up in OBS as a thin line under the chat)
+   cannot slip through. The borders go for the same reason. */
+#chat-messages.yt-live-chat-renderer > #contents.yt-live-chat-renderer > :not(#chat),
+#chat.yt-live-chat-renderer > :not(#item-list),
+#item-list.yt-live-chat-renderer > :not(yt-live-chat-item-list-renderer),
+yt-live-chat-item-list-renderer > :not(#contents),
+#contents.yt-live-chat-item-list-renderer > :not(#item-scroller),
+#item-scroller.yt-live-chat-item-list-renderer > :not(#item-offset),
+#item-offset.yt-live-chat-item-list-renderer > :not(#items) {
+  display: none !important;
+}
+yt-live-chat-app, yt-live-chat-renderer, #chat-messages.yt-live-chat-renderer, #contents.yt-live-chat-renderer,
+#chat.yt-live-chat-renderer, #item-list.yt-live-chat-renderer, yt-live-chat-item-list-renderer,
+#contents.yt-live-chat-item-list-renderer, #item-scroller.yt-live-chat-item-list-renderer,
+#item-offset.yt-live-chat-item-list-renderer, #items.yt-live-chat-item-list-renderer {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
 
 /* ---------- 3. Per-message interface nobody needs on stream ---------- */
 #items.yt-live-chat-item-list-renderer :is(#timestamp, #menu, #inline-action-button-container, #show-original,
