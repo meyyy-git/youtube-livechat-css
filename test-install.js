@@ -28,7 +28,7 @@ try {
   assert.equal(first.status, 0, first.stderr);
   for (const parts of skillPaths) {
     const skillFile = join(temp, ...parts, "youtube-livechat-css", "SKILL.md");
-    assert.match(readFileSync(skillFile, "utf8"), /^---\nname: youtube-livechat-css/m);
+    assert.match(readFileSync(skillFile, "utf8"), /^---\r?\nname: youtube-livechat-css/m);
   }
   const elementGuide = readFileSync(join(temp, ".agents", "skills", "youtube-livechat-css", "references", "youtube-live-chat-elements.md"), "utf8");
   assert.match(elementGuide, /ytd-sponsorships-live-chat-gift-purchase-announcement-renderer/);
