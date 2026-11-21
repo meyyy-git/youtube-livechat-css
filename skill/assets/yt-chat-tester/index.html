@@ -269,7 +269,10 @@ function build() {
 function render(key, tier, o = {}) {
   const tag = key.split(/[\[|]/)[0];
   const long = o.long ?? $('long').checked;
-  const name = o.name || $('name').value || (long ? LONG_NAME : pickOf(NAMES));
+  // Tanpa nama yang diisi, pesan chat biasa memakai nama perannya, supaya jelas gaya mana milik peran mana.
+  const role = !tag.includes('text-message') ? '' : key.includes('moderator+member') ? 'Moderator + Member' : key.includes('=moderator') ? 'Moderator'
+    : key.includes('=member') ? 'Member' : key.includes('=owner') ? 'Streamer' : key.includes('verified') ? 'Verified' : key.includes('is-deleted') ? '' : 'Viewer';
+  const name = o.name || $('name').value || (long ? LONG_NAME : role || pickOf(NAMES));
   let text = esc(o.message || $('msg').value || (long ? LONG_MSG : pickOf(MSGS)));
   // Emoji direkam dari pesan chat biasa. YouTube mengatur ukurannya lewat kelas scope renderer tempat ia berada
   // (mis. "#content.yt-live-chat-membership-item-renderer img.yt-live-chat-membership-item-renderer"),
